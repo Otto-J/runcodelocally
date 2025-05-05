@@ -5,7 +5,7 @@ RunCodeLocally is a VS Code extension that allows you to receive and run code fr
 ## Features
 
 - Start a local HTTP server to receive code from web pages
-- Configurable server port (default: 9000)
+- Configurable server port (default: 9009)
 - Display received code in a dedicated VS Code panel
 - Run JavaScript code and see the output
 - Simple API for web pages to send code to VS Code
@@ -37,13 +37,13 @@ RunCodeLocally is a VS Code extension that allows you to receive and run code fr
 Use a simple fetch request to send code to VS Code:
 
 ```javascript
-fetch("http://localhost:9000/code", {
-    method: "POST",
-    body: "console.log('Hello from web page!');"
+fetch("http://localhost:9009/code", {
+  method: "POST",
+  body: "console.log('Hello from web page!');",
 })
-.then(response => response.text())
-.then(data => console.log(data))
-.catch(error => console.error('Error:', error));
+  .then((response) => response.text())
+  .then((data) => console.log(data))
+  .catch((error) => console.error("Error:", error));
 ```
 
 ### Running the Code
@@ -54,7 +54,7 @@ Once code appears in the VS Code panel, click the "Run Code" button to execute i
 
 This extension contributes the following settings:
 
-* `runcodelocally.port`: Port number for the local HTTP server (default: 9000)
+- `runcodelocally.port`: Port number for the local HTTP server (default: 9009)
 
 ## Example HTML Page
 
