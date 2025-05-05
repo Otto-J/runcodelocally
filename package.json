@@ -33,6 +33,21 @@
           "type": "number",
           "default": 9009,
           "description": "Port number for the local HTTP server"
+        },
+        "runcodelocally.defaultLanguage": {
+          "type": "string",
+          "default": "javascript",
+          "enum": [
+            "javascript",
+            "typescript",
+            "dart",
+            "python",
+            "ruby",
+            "go",
+            "php",
+            "rust"
+          ],
+          "description": "Default programming language for code execution"
         }
       }
     }

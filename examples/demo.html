@@ -64,8 +64,25 @@
 
     <div class="settings">
       <h3>Server Settings</h3>
-      <label for="portInput">Port:</label>
-      <input type="number" id="portInput" value="9009" min="1024" max="65535" />
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <div>
+          <label for="portInput">Port:</label>
+          <input type="number" id="portInput" value="9009" min="1024" max="65535" />
+        </div>
+        <div>
+          <label for="languageSelect">Default Language:</label>
+          <select id="languageSelect">
+            <option value="javascript">JavaScript</option>
+            <option value="typescript">TypeScript</option>
+            <option value="dart">Dart</option>
+            <option value="python">Python</option>
+            <option value="ruby">Ruby</option>
+            <option value="go">Go</option>
+            <option value="php">PHP</option>
+            <option value="rust">Rust</option>
+          </select>
+        </div>
+      </div>
     </div>
 
     <div class="code-container">
@@ -81,19 +98,59 @@ function fibonacci(n) {
     return fibonacci(n-1) + fibonacci(n-2);
 }
 
-console.log('Fibonacci(10):', fibonacci(10));</pre
-      >
+console.log('Fibonacci(10):', fibonacci(10));</pre>
 
       <button onclick="sendCode('js')">Send JavaScript Code to VS Code</button>
       <div id="jsResult" class="result"></div>
     </div>
 
     <div class="code-container">
+      <h3>Dart Example</h3>
+      <pre id="dartCode">
+// Dart Example
+void main() {
+  print('Hello from Dart!');
+  print('Current time: ${DateTime.now().toString()}');
+  
+  // Calculate fibonacci sequence
+  print('Fibonacci(10): ${fibonacci(10)}');
+}
+
+int fibonacci(int n) {
+  if (n <= 1) return n;
+  return fibonacci(n-1) + fibonacci(n-2);
+}</pre>
+
+      <button onclick="sendCode('dart')">Send Dart Code to VS Code</button>
+      <div id="dartResult" class="result"></div>
+    </div>
+
+    <div class="code-container">
+      <h3>Python Example</h3>
+      <pre id="pythonCode">
+# Python Example
+import datetime
+
+print('Hello from Python!')
+print('Current time:', datetime.datetime.now())
+
+# Calculate fibonacci sequence
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+
+print('Fibonacci(10):', fibonacci(10))</pre>
+
+      <button onclick="sendCode('python')">Send Python Code to VS Code</button>
+      <div id="pythonResult" class="result"></div>
+    </div>
+
+    <div class="code-container">
       <h3>Custom Code</h3>
       <textarea id="customCode" rows="10" style="width: 100%">
 // Write your code here
-console.log('Hello, world!');</textarea
-      >
+console.log('Hello, world!');</textarea>
 
       <button onclick="sendCustomCode()">Send Custom Code to VS Code</button>
       <div id="customResult" class="result"></div>
@@ -103,32 +160,52 @@ console.log('Hello, world!');</textarea
       function sendCode(type) {
         const port = document.getElementById("portInput").value;
         let code;
+        let language;
         let resultElement;
 
         if (type === "js") {
           code = document.getElementById("jsCode").textContent;
           resultElement = document.getElementById("jsResult");
+          language = "javascript";
+        } else if (type === "dart") {
+          code = document.getElementById("dartCode").textContent;
+          resultElement = document.getElementById("dartResult");
+          language = "dart";
+        } else if (type === "python") {
+          code = document.getElementById("pythonCode").textContent;
+          resultElement = document.getElementById("pythonResult");
+          language = "python";
         }
 
-        sendToVSCode(code, port, resultElement);
+        sendToVSCode(code, language, port, resultElement);
       }
 
       function sendCustomCode() {
         const port = document.getElementById("portInput").value;
         const code = document.getElementById("customCode").value;
+        const language = document.getElementById("languageSelect").value;
         const resultElement = document.getElementById("customResult");
 
-        sendToVSCode(code, port, resultElement);
+        sendToVSCode(code, language, port, resultElement);
       }
 
-      function sendToVSCode(code, port, resultElement) {
+      function sendToVSCode(code, language, port, resultElement) {
         resultElement.style.display = "block";
         resultElement.textContent = "Sending code...";
         resultElement.className = "result";
 
-        fetch(`http://localhost:${port}/code`, {
+        // Create payload with code and language
+        const payload = JSON.stringify({
+          code: code,
+          language: language
+        });
+
+        fetch(`http://localhost:${port}/code-with-language`, {
           method: "POST",
-          body: code,
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: payload
         })
           .then((response) => response.text())
           .then((data) => {
@@ -136,8 +213,20 @@ console.log('Hello, world!');</textarea
             resultElement.className = "result success";
           })
           .catch((error) => {
-            resultElement.textContent = `Error: ${error.message}. Make sure the VS Code extension is running.`;
-            resultElement.className = "result error";
+            // Fallback to old endpoint if new one fails
+            fetch(`http://localhost:${port}/code`, {
+              method: "POST",
+              body: payload
+            })
+              .then((response) => response.text())
+              .then((data) => {
+                resultElement.textContent = data;
+                resultElement.className = "result success";
+              })
+              .catch((innerError) => {
+                resultElement.textContent = `Error: ${error.message}. Make sure the VS Code extension is running.`;
+                resultElement.className = "result error";
+              });
           });
       }
     </script>

@@ -3,16 +3,21 @@ import cors from 'cors';
 import * as vscode from 'vscode';
 import * as http from 'http';
 
+export interface CodeData {
+  code: string;
+  language: string;
+}
+
 export interface ServerOptions {
   port: number;
-  onCodeReceived: (code: string) => void;
+  onCodeReceived: (codeData: CodeData) => void;
 }
 
 export class CodeReceiverServer {
   private app: express.Express;
   private server: http.Server | null = null;
   private port: number;
-  private onCodeReceived: (code: string) => void;
+  private onCodeReceived: (codeData: CodeData) => void;
 
   constructor(options: ServerOptions) {
     this.port = options.port;
@@ -22,13 +27,37 @@ export class CodeReceiverServer {
     this.app.use(cors());
     this.app.use(express.text({ type: '*/*' }));
     
+    this.app.use(express.json());
+    
     this.app.post('/code', (req, res) => {
-      const code = req.body;
+      let code = req.body;
+      let language = 'javascript'; // Default language
+      
       if (typeof code === 'string') {
-        this.onCodeReceived(code);
+        try {
+          const jsonData = JSON.parse(code);
+          if (jsonData.code && jsonData.language) {
+            code = jsonData.code;
+            language = jsonData.language;
+          }
+        } catch (e) {
+        }
+        
+        this.onCodeReceived({ code, language });
         res.send('✅ Code received by VS Code extension');
       } else {
-        res.status(400).send('❌ Invalid code format. Please send plain text.');
+        res.status(400).send('❌ Invalid code format. Please send plain text or JSON with code and language.');
+      }
+    });
+    
+    this.app.post('/code-with-language', (req, res) => {
+      const { code, language } = req.body;
+      
+      if (typeof code === 'string' && typeof language === 'string') {
+        this.onCodeReceived({ code, language });
+        res.send('✅ Code received by VS Code extension');
+      } else {
+        res.status(400).send('❌ Invalid format. Please send JSON with code and language properties.');
       }
     });
     
