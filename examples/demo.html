@@ -64,10 +64,16 @@
 
     <div class="settings">
       <h3>Server Settings</h3>
-      <div style="display: flex; align-items: center; gap: 20px;">
+      <div style="display: flex; align-items: center; gap: 20px">
         <div>
           <label for="portInput">Port:</label>
-          <input type="number" id="portInput" value="9009" min="1024" max="65535" />
+          <input
+            type="number"
+            id="portInput"
+            value="9009"
+            min="1024"
+            max="65535"
+          />
         </div>
         <div>
           <label for="languageSelect">Default Language:</label>
@@ -98,7 +104,8 @@ function fibonacci(n) {
     return fibonacci(n-1) + fibonacci(n-2);
 }
 
-console.log('Fibonacci(10):', fibonacci(10));</pre>
+console.log('Fibonacci(10):', fibonacci(10));</pre
+      >
 
       <button onclick="sendCode('js')">Send JavaScript Code to VS Code</button>
       <div id="jsResult" class="result"></div>
@@ -119,7 +126,8 @@ void main() {
 int fibonacci(int n) {
   if (n <= 1) return n;
   return fibonacci(n-1) + fibonacci(n-2);
-}</pre>
+}</pre
+      >
 
       <button onclick="sendCode('dart')">Send Dart Code to VS Code</button>
       <div id="dartResult" class="result"></div>
@@ -140,7 +148,8 @@ def fibonacci(n):
         return n
     return fibonacci(n-1) + fibonacci(n-2)
 
-print('Fibonacci(10):', fibonacci(10))</pre>
+print('Fibonacci(10):', fibonacci(10))</pre
+      >
 
       <button onclick="sendCode('python')">Send Python Code to VS Code</button>
       <div id="pythonResult" class="result"></div>
@@ -150,7 +159,8 @@ print('Fibonacci(10):', fibonacci(10))</pre>
       <h3>Custom Code</h3>
       <textarea id="customCode" rows="10" style="width: 100%">
 // Write your code here
-console.log('Hello, world!');</textarea>
+console.log('Hello, world!');</textarea
+      >
 
       <button onclick="sendCustomCode()">Send Custom Code to VS Code</button>
       <div id="customResult" class="result"></div>
@@ -195,17 +205,24 @@ console.log('Hello, world!');</textarea>
         resultElement.className = "result";
 
         // Create URL-encoded payload with code and language
+
         const encodedCode = encodeURIComponent(code);
         const encodedLanguage = encodeURIComponent(language);
-        
+
         // Use form URL-encoded format
         const formData = new FormData();
-        formData.append('code', code);
-        formData.append('language', language);
+        formData.append("code", code);
+        formData.append("language", language);
 
         fetch(`http://localhost:${port}/code-with-language`, {
           method: "POST",
-          body: formData
+          body: JSON.stringify({
+            code: encodedCode,
+            language: encodedLanguage,
+          }),
+          headers: {
+            "Content-Type": "application/json",
+          },
         })
           .then((response) => response.text())
           .then((data) => {
@@ -216,10 +233,10 @@ console.log('Hello, world!');</textarea>
             // Fallback to old endpoint if new one fails
             // Use URL-encoded string format for the /code endpoint
             const urlEncodedPayload = `lang=${encodedLanguage}&code=${encodedCode}`;
-            
+
             fetch(`http://localhost:${port}/code`, {
               method: "POST",
-              body: urlEncodedPayload
+              body: urlEncodedPayload,
             })
               .then((response) => response.text())
               .then((data) => {
