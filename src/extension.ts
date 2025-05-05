@@ -1,26 +1,66 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import { CodeReceiverServer } from './server';
+import { CodeRunnerPanel } from './webview';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+let server: CodeReceiverServer | undefined;
+
 export function activate(context: vscode.ExtensionContext) {
+  console.log('Extension "runcodelocally" is now active!');
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "runcodelocally" is now active!');
+  const startServerCommand = vscode.commands.registerCommand('runcodelocally.startServer', async () => {
+    if (server && server.isRunning()) {
+      vscode.window.showInformationMessage(`Server is already running on port ${server.getPort()}`);
+      return;
+    }
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('runcodelocally.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from RunCodeLocally!');
-	});
+    try {
+      const config = vscode.workspace.getConfiguration('runcodelocally');
+      const port = config.get<number>('port', 9000);
 
-	context.subscriptions.push(disposable);
+      const panel = CodeRunnerPanel.createOrShow(context.extensionUri, port);
+
+      server = new CodeReceiverServer({
+        port,
+        onCodeReceived: (code: string) => {
+          panel.updateCode(code);
+        }
+      });
+
+      await server.start();
+    } catch (err) {
+      vscode.window.showErrorMessage(`Failed to start server: ${err}`);
+    }
+  });
+
+  const stopServerCommand = vscode.commands.registerCommand('runcodelocally.stopServer', async () => {
+    if (!server || !server.isRunning()) {
+      vscode.window.showInformationMessage('No server is running');
+      return;
+    }
+
+    try {
+      await server.stop();
+      server = undefined;
+    } catch (err) {
+      vscode.window.showErrorMessage(`Failed to stop server: ${err}`);
+    }
+  });
+
+  const showPanelCommand = vscode.commands.registerCommand('runcodelocally.showPanel', () => {
+    const config = vscode.workspace.getConfiguration('runcodelocally');
+    const port = config.get<number>('port', 9000);
+    
+    CodeRunnerPanel.createOrShow(context.extensionUri, port);
+  });
+
+  context.subscriptions.push(startServerCommand);
+  context.subscriptions.push(stopServerCommand);
+  context.subscriptions.push(showPanelCommand);
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+  if (server && server.isRunning()) {
+    return server.stop();
+  }
+  return undefined;
+}
