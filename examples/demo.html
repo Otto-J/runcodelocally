@@ -194,18 +194,18 @@ console.log('Hello, world!');</textarea>
         resultElement.textContent = "Sending code...";
         resultElement.className = "result";
 
-        // Create payload with code and language
-        const payload = JSON.stringify({
-          code: code,
-          language: language
-        });
+        // Create URL-encoded payload with code and language
+        const encodedCode = encodeURIComponent(code);
+        const encodedLanguage = encodeURIComponent(language);
+        
+        // Use form URL-encoded format
+        const formData = new FormData();
+        formData.append('code', code);
+        formData.append('language', language);
 
         fetch(`http://localhost:${port}/code-with-language`, {
           method: "POST",
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: payload
+          body: formData
         })
           .then((response) => response.text())
           .then((data) => {
@@ -214,9 +214,12 @@ console.log('Hello, world!');</textarea>
           })
           .catch((error) => {
             // Fallback to old endpoint if new one fails
+            // Use URL-encoded string format for the /code endpoint
+            const urlEncodedPayload = `lang=${encodedLanguage}&code=${encodedCode}`;
+            
             fetch(`http://localhost:${port}/code`, {
               method: "POST",
-              body: payload
+              body: urlEncodedPayload
             })
               .then((response) => response.text())
               .then((data) => {

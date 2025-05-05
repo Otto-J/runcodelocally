@@ -34,30 +34,47 @@ export class CodeReceiverServer {
       let language = 'javascript'; // Default language
       
       if (typeof code === 'string') {
-        try {
-          const jsonData = JSON.parse(code);
-          if (jsonData.code && jsonData.language) {
-            code = jsonData.code;
-            language = jsonData.language;
+        if (code.startsWith('lang=') && code.includes('&code=')) {
+          try {
+            const parts = code.split('&');
+            const langPart = parts.find(p => p.startsWith('lang='));
+            const codePart = parts.find(p => p.startsWith('code='));
+            
+            if (langPart && codePart) {
+              language = decodeURIComponent(langPart.substring(5));
+              code = decodeURIComponent(codePart.substring(5));
+            }
+          } catch (e) {
           }
-        } catch (e) {
         }
         
         this.onCodeReceived({ code, language });
         res.send('✅ Code received by VS Code extension');
       } else {
-        res.status(400).send('❌ Invalid code format. Please send plain text or JSON with code and language.');
+        res.status(400).send('❌ Invalid code format. Please send plain text or URL-encoded data.');
       }
     });
     
     this.app.post('/code-with-language', (req, res) => {
-      const { code, language } = req.body;
-      
-      if (typeof code === 'string' && typeof language === 'string') {
-        this.onCodeReceived({ code, language });
-        res.send('✅ Code received by VS Code extension');
+      if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
+        const code = req.body.code;
+        const language = req.body.language;
+        
+        if (typeof code === 'string' && typeof language === 'string') {
+          this.onCodeReceived({ code, language });
+          res.send('✅ Code received by VS Code extension');
+        } else {
+          res.status(400).send('❌ Invalid format. Please send form data with code and language fields.');
+        }
       } else {
-        res.status(400).send('❌ Invalid format. Please send JSON with code and language properties.');
+        const { code, language } = req.body;
+        
+        if (typeof code === 'string' && typeof language === 'string') {
+          this.onCodeReceived({ code, language });
+          res.send('✅ Code received by VS Code extension');
+        } else {
+          res.status(400).send('❌ Invalid format. Please send JSON with code and language properties.');
+        }
       }
     });
     
