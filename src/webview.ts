@@ -24,10 +24,13 @@ export class CodeRunnerPanel {
       async (message) => {
         switch (message.command) {
           case 'runCode':
-            this.runCode(message.code);
+            this.runCode(message.code, message.language);
             break;
           case 'clearCode':
             this.panel.webview.postMessage({ command: 'clearOutput' });
+            break;
+          case 'changeLanguage':
+            this.currentLanguage = message.language;
             break;
         }
       },
@@ -36,7 +39,7 @@ export class CodeRunnerPanel {
     );
   }
 
-  public static createOrShow(extensionUri: vscode.Uri, serverPort: number): CodeRunnerPanel {
+  public static createOrShow(extensionUri: vscode.Uri, serverPort: number, defaultLanguage: string = 'javascript'): CodeRunnerPanel {
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
       : undefined;
@@ -44,6 +47,7 @@ export class CodeRunnerPanel {
     if (CodeRunnerPanel.currentPanel) {
       CodeRunnerPanel.currentPanel.panel.reveal(column);
       CodeRunnerPanel.currentPanel.serverPort = serverPort;
+      CodeRunnerPanel.currentPanel.currentLanguage = defaultLanguage;
       CodeRunnerPanel.currentPanel.updateWebview();
       return CodeRunnerPanel.currentPanel;
     }
@@ -59,11 +63,15 @@ export class CodeRunnerPanel {
     );
 
     CodeRunnerPanel.currentPanel = new CodeRunnerPanel(panel, extensionUri, serverPort);
+    CodeRunnerPanel.currentPanel.currentLanguage = defaultLanguage;
     return CodeRunnerPanel.currentPanel;
   }
 
-  public updateCode(code: string): void {
-    this.panel.webview.postMessage({ command: 'updateCode', code });
+  private currentLanguage: string = 'javascript';
+
+  public updateCode(code: string, language: string = 'javascript'): void {
+    this.currentLanguage = language;
+    this.panel.webview.postMessage({ command: 'updateCode', code, language });
   }
 
   private updateWebview(): void {
@@ -152,6 +160,19 @@ export class CodeRunnerPanel {
             
             <div class="code-container">
                 <h3>Received Code:</h3>
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <label for="languageSelect" style="margin-right: 10px;">Language:</label>
+                    <select id="languageSelect" style="padding: 5px; border-radius: 3px;">
+                        <option value="javascript">JavaScript</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="dart">Dart</option>
+                        <option value="python">Python</option>
+                        <option value="ruby">Ruby</option>
+                        <option value="go">Go</option>
+                        <option value="php">PHP</option>
+                        <option value="rust">Rust</option>
+                    </select>
+                </div>
                 <div class="code-area" id="codeDisplay"></div>
             </div>
             
@@ -174,11 +195,17 @@ export class CodeRunnerPanel {
                 const runButton = document.getElementById('runButton');
                 const clearButton = document.getElementById('clearButton');
                 
+                let currentLanguage = 'javascript';
+                
                 window.addEventListener('message', event => {
                     const message = event.data;
                     switch (message.command) {
                         case 'updateCode':
                             codeDisplay.textContent = message.code;
+                            if (message.language) {
+                                currentLanguage = message.language;
+                                document.getElementById('languageSelect').value = message.language;
+                            }
                             break;
                         case 'updateOutput':
                             outputDisplay.textContent = message.output;
@@ -189,11 +216,22 @@ export class CodeRunnerPanel {
                     }
                 });
                 
+                const languageSelect = document.getElementById('languageSelect');
+                
+                languageSelect.addEventListener('change', () => {
+                    currentLanguage = languageSelect.value;
+                    vscode.postMessage({
+                        command: 'changeLanguage',
+                        language: currentLanguage
+                    });
+                });
+                
                 runButton.addEventListener('click', () => {
                     const code = codeDisplay.textContent;
                     vscode.postMessage({
                         command: 'runCode',
-                        code: code
+                        code: code,
+                        language: currentLanguage
                     });
                 });
                 
@@ -210,7 +248,7 @@ export class CodeRunnerPanel {
     </html>`;
   }
 
-  private async runCode(code: string): Promise<void> {
+  private async runCode(code: string, language?: string): Promise<void> {
     if (!code || code.trim() === '') {
       this.panel.webview.postMessage({ 
         command: 'updateOutput', 
@@ -219,33 +257,99 @@ export class CodeRunnerPanel {
       return;
     }
 
+    const lang = language || this.currentLanguage;
+    
     try {
       const tempDir = os.tmpdir();
-      const tempFile = path.join(tempDir, `runcodelocally_${Date.now()}.js`);
+      let tempFile: string;
+      let process: childProcess.ChildProcess;
       
-      fs.writeFileSync(tempFile, code);
-      
-      const process = childProcess.spawn('node', [tempFile]);
+      switch (lang.toLowerCase()) {
+        case 'javascript':
+        case 'js':
+          tempFile = path.join(tempDir, `runcodelocally_${Date.now()}.js`);
+          fs.writeFileSync(tempFile, code);
+          process = childProcess.spawn('node', [tempFile]);
+          break;
+          
+        case 'typescript':
+        case 'ts':
+          tempFile = path.join(tempDir, `runcodelocally_${Date.now()}.ts`);
+          fs.writeFileSync(tempFile, code);
+          process = childProcess.spawn('npx', ['ts-node', tempFile]);
+          break;
+          
+        case 'dart':
+          tempFile = path.join(tempDir, `runcodelocally_${Date.now()}.dart`);
+          fs.writeFileSync(tempFile, code);
+          process = childProcess.spawn('dart', [tempFile]);
+          break;
+          
+        case 'python':
+        case 'py':
+          tempFile = path.join(tempDir, `runcodelocally_${Date.now()}.py`);
+          fs.writeFileSync(tempFile, code);
+          process = childProcess.spawn('python3', [tempFile]);
+          break;
+          
+        case 'ruby':
+        case 'rb':
+          tempFile = path.join(tempDir, `runcodelocally_${Date.now()}.rb`);
+          fs.writeFileSync(tempFile, code);
+          process = childProcess.spawn('ruby', [tempFile]);
+          break;
+          
+        case 'go':
+          tempFile = path.join(tempDir, `runcodelocally_${Date.now()}.go`);
+          fs.writeFileSync(tempFile, code);
+          process = childProcess.spawn('go', ['run', tempFile]);
+          break;
+          
+        case 'php':
+          tempFile = path.join(tempDir, `runcodelocally_${Date.now()}.php`);
+          fs.writeFileSync(tempFile, code);
+          process = childProcess.spawn('php', [tempFile]);
+          break;
+          
+        case 'rust':
+        case 'rs':
+          const rustDir = path.join(tempDir, `rust_${Date.now()}`);
+          fs.mkdirSync(rustDir);
+          tempFile = path.join(rustDir, 'main.rs');
+          fs.writeFileSync(tempFile, code);
+          process = childProcess.spawn('rustc', [tempFile, '-o', path.join(rustDir, 'output')]);
+          process = childProcess.spawn(path.join(rustDir, 'output'));
+          break;
+          
+        default:
+          tempFile = path.join(tempDir, `runcodelocally_${Date.now()}.js`);
+          fs.writeFileSync(tempFile, code);
+          process = childProcess.spawn('node', [tempFile]);
+      }
       
       let stdout = '';
       let stderr = '';
       
-      process.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
+      if (process.stdout) {
+        process.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+      }
       
-      process.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
+      if (process.stderr) {
+        process.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+      }
       
-      process.on('close', (code) => {
+      process.on('close', (exitCode) => {
         try {
           fs.unlinkSync(tempFile);
         } catch (err) {
           console.error('Failed to delete temp file:', err);
         }
         
-        const output = stderr ? `Error (${code}):\n${stderr}` : stdout;
+        const output = stderr ? `Error (${exitCode}):\n${stderr}` : stdout;
         this.panel.webview.postMessage({ 
           command: 'updateOutput', 
           output: output 

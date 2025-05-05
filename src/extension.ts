@@ -20,13 +20,14 @@ export function activate(context: vscode.ExtensionContext) {
       try {
         const config = vscode.workspace.getConfiguration("runcodelocally");
         const port = config.get<number>("port", 9009);
+        const defaultLanguage = config.get<string>("defaultLanguage", "javascript");
 
-        const panel = CodeRunnerPanel.createOrShow(context.extensionUri, port);
+        const panel = CodeRunnerPanel.createOrShow(context.extensionUri, port, defaultLanguage);
 
         server = new CodeReceiverServer({
           port,
-          onCodeReceived: (code: string) => {
-            panel.updateCode(code);
+          onCodeReceived: (codeData) => {
+            panel.updateCode(codeData.code, codeData.language);
           },
         });
 
@@ -59,8 +60,9 @@ export function activate(context: vscode.ExtensionContext) {
     () => {
       const config = vscode.workspace.getConfiguration("runcodelocally");
       const port = config.get<number>("port", 9009);
+      const defaultLanguage = config.get<string>("defaultLanguage", "javascript");
 
-      CodeRunnerPanel.createOrShow(context.extensionUri, port);
+      CodeRunnerPanel.createOrShow(context.extensionUri, port, defaultLanguage);
     }
   );
 
