@@ -2,7 +2,8 @@
   "name": "runcodelocally",
   "displayName": "RunCodeLocally",
   "description": "Run Code Locally from Web Pages",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "icon": "media/logo.webp",
   "engines": {
     "vscode": "^1.99.0"
   },
@@ -52,16 +53,22 @@
       }
     }
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Otto-J/runcodelocally.git"
+  },
+  "publisher": "OttoWebWorker",
+  "license": "MIT",
   "scripts": {
-    "vscode:prepublish": "pnpm run package",
-    "compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
+    "vscode:prepublish": "yarn run package",
+    "compile": "yarn run check-types && yarn run lint && node esbuild.js",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
+    "package": "yarn run check-types && yarn run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
+    "pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "format": "prettier --write src/**/*.ts",
@@ -87,9 +94,5 @@
     "cors": "^2.8.5",
     "express": "^4.18.2"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
-  }
+  "packageManager": "yarn@1.22.19"
 }
